@@ -1143,13 +1143,13 @@ enabled: true
 
 **Goal:** Error handling, testing, documentation, npm publish prep
 
-- [ ] Comprehensive error handling
+- [x] Comprehensive error handling
   - Missing `gh` auth → clear error + setup instructions
   - Claude API errors → retry with backoff (max 3)
   - GitHub rate limiting → pause + alert
   - Invalid skill params → validation error before execution
   - Daemon not running → prompt to start
-- [ ] Unit tests
+- [x] Unit tests
   - Config loading + merging
   - Skills parsing + validation
   - Schedule schema validation
@@ -1161,12 +1161,12 @@ enabled: true
   - Daemon lifecycle (start/stop/restart)
   - Skill execution against test repo
   - Schedule creation via natural language
-- [ ] Documentation
+- [x] Documentation
   - README with quickstart
   - Skills authoring guide
   - Configuration reference
   - Built-in skills reference
-- [ ] npm publish preparation
+- [x] npm publish preparation
   - `bin` field in package.json
   - Build step (if needed for production)
   - License (Apache 2.0)
