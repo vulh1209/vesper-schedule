@@ -953,41 +953,41 @@ enabled: true
 
 **Goal:** Project scaffold, config system, skill loading, basic CLI
 
-- [ ] Initialize Bun project with TypeScript strict mode
+- [x] Initialize Bun project with TypeScript strict mode
   - `bin/vesper-schedule.ts` entry point
   - `package.json` with dependencies
   - `tsconfig.json` with strict settings
-- [ ] Implement config system (`src/core/config.ts`)
+- [x] Implement config system (`src/core/config.ts`)
   - Global config at `~/.vesper-schedule/config.json`
   - Per-repo config at `.vesper-schedule/config.json`
   - Zod schema validation
   - Deep merge with precedence
-- [ ] Implement path constants (`src/core/paths.ts`)
+- [x] Implement path constants (`src/core/paths.ts`)
   - `~/.vesper-schedule/` directory structure
   - Auto-create directories on first use
-- [ ] Implement skills loader (`src/skills/loader.ts`)
+- [x] Implement skills loader (`src/skills/loader.ts`)
   - Parse YAML frontmatter with gray-matter
   - Validate with Zod schema
   - Load from builtin → global → repo (with precedence)
-- [ ] Write 7 built-in skill files (`skills/*.md`)
+- [x] Write 7 built-in skill files (`skills/*.md`)
   - issue-triage, fix-analysis, feature-plan, plan-review
   - pr-review, release-notes, repo-monitor
-- [ ] Basic CLI with commander (`src/cli/index.ts`)
+- [x] Basic CLI with commander (`src/cli/index.ts`)
   - `vesper-schedule` → opens REPL
   - `vesper-schedule daemon start|stop|status`
   - `vesper-schedule skills list|show <name>`
   - `vesper-schedule schedules list`
-- [ ] First-time setup detection
+- [x] First-time setup detection
   - Check `gh auth status`
   - Check `~/.vesper-schedule/` exists
   - Create directory structure
 
-- [ ] **[NEW] ink + Bun compatibility validation**
+- [x] **[NEW] ink + Bun compatibility validation**
   - Test `process.stdin.resume()` workaround
   - Verify TextInput receives keystrokes
   - Verify spinner rendering
   - If broken: switch to Node.js runtime (change `bun` → `node` in bin)
-- [ ] **[NEW] Define branded types and Result pattern** (`src/core/types.ts`)
+- [x] **[NEW] Define branded types and Result pattern** (`src/core/types.ts`)
   - `ScheduleId`, `JobId`, `SessionId`, `GitHubRepo` branded types
   - `Result<T, E>` type for all fallible operations
   - Helper functions: `ok()`, `err()`, `isOk()`, `isErr()`
