@@ -1085,32 +1085,32 @@ enabled: true
 
 **Goal:** Interactive chat REPL with rich terminal UI
 
-- [ ] Implement intent parser (`src/parser/intent.ts`)
+- [x] Implement intent parser (`src/parser/intent.ts`)
   - **[UPDATED] Regex fast-path** for built-in commands (skip Claude call)
   - NL → structured intent via Claude (only for natural language input)
   - Support Vietnamese and English
   - Confidence display + confirmation flow
   - **[NEW] Structured JSON input to Claude** (not string interpolation)
-- [ ] Implement cron parser (`src/parser/cron-parser.ts`)
+- [x] Implement cron parser (`src/parser/cron-parser.ts`)
   - NL time → cron expression
   - Preview next 3 execution times
   - **[NEW] Validate cron expressions** with croner before saving
-- [ ] Implement REPL app (`src/cli/repl.tsx`)
+- [x] Implement REPL app (`src/cli/repl.tsx`)
   - ink-based React app
   - Chat message history display
   - TextInput with prompt
   - Command detection (status, list, logs, etc.)
-- [ ] Implement REPL components
+- [x] Implement REPL components
   - `Welcome.tsx` - first-time banner with help
   - `Chat.tsx` - message list + input
   - `ScheduleTable.tsx` - table of schedules with status
   - `JobStatus.tsx` - spinner + progress for running jobs
   - `DaemonIndicator.tsx` - daemon status in prompt area
-- [ ] Implement daemon connection from REPL (`src/cli/hooks/useDaemon.ts`)
+- [x] Implement daemon connection from REPL (`src/cli/hooks/useDaemon.ts`)
   - Auto-detect daemon running
   - IPC client for sending commands
   - Real-time status updates
-- [ ] Built-in command handling
+- [x] Built-in command handling
   - `status` → ScheduleTable
   - `list` → schedule list
   - `logs [job-id]` → execution log viewer
@@ -1120,14 +1120,14 @@ enabled: true
   - `help` → command reference
   - `quit` → exit REPL
 
-- [ ] **[NEW] Implement CLI subcommands for all REPL operations**
+- [x] **[NEW] Implement CLI subcommands for all REPL operations**
   - `vesper-schedule run <skill> --repo <repo> [--param key=value]`
   - `vesper-schedule schedule create --skill <skill> --cron <expr> [--param key=value]`
   - `vesper-schedule schedule list [--json]`
   - `vesper-schedule schedule delete <id>`
   - `vesper-schedule daemon status [--json]`
   - All commands support `--json` flag for machine output
-- [ ] **[NEW] Disable input during intent processing**
+- [x] **[NEW] Disable input during intent processing**
   - Prevent queued inputs causing race conditions
   - Show clear "thinking..." indicator
 

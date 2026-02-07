@@ -2,10 +2,12 @@ import { Command } from 'commander'
 import { loadAllSkills, loadSkill } from '../skills/loader.js'
 import { executeSkill } from '../worker/executor.js'
 import { startDaemon, stopDaemon, getDaemonStatus } from '../daemon/index.js'
-import { loadSchedules } from '../daemon/schedules.js'
+import { loadSchedules, saveSchedule, generateScheduleId } from '../daemon/schedules.js'
 import { sendIpcRequest } from '../ipc/client.js'
 import { checkSetup, runFirstTimeSetup } from '../core/setup.js'
 import { ensureDirectories } from '../core/paths.js'
+import { validateCron, getNextRuns } from '../parser/cron-parser.js'
+import { startRepl } from './repl.js'
 
 const program = new Command()
 
@@ -14,7 +16,7 @@ program
   .description('CLI tool for scheduling and executing GitHub automation with Claude Code SDK')
   .version('0.1.0')
 
-// --- Default action: REPL (placeholder for Phase 4) ---
+// --- Default action: REPL ---
 program
   .action(() => {
     const setup = checkSetup()
@@ -24,9 +26,9 @@ program
     }
     if (setup.value.firstRun) {
       console.log('First run detected. Setting up ~/.vesper-schedule/ ...')
-      const result = runFirstTimeSetup()
-      if (!result.ok) {
-        console.error(result.error)
+      const setupResult = runFirstTimeSetup()
+      if (!setupResult.ok) {
+        console.error(setupResult.error)
         process.exit(1)
       }
       console.log('Setup complete.')
@@ -34,8 +36,7 @@ program
     if (!setup.value.ghAuthenticated) {
       console.warn('Warning: gh CLI not authenticated. Run `gh auth login` first.')
     }
-    console.log('REPL mode coming in Phase 4. Use subcommands for now.')
-    console.log('Run `vesper-schedule --help` for available commands.')
+    startRepl()
   })
 
 // --- skills subcommand ---
@@ -217,6 +218,92 @@ schedulesCmd
         console.log(`  ${''.padEnd(12)} last run: ${s.last_run} (${s.last_status ?? 'unknown'})`)
       }
       console.log()
+    }
+  })
+
+schedulesCmd
+  .command('create')
+  .description('Create a new schedule')
+  .requiredOption('--skill <skill>', 'Skill slug to schedule')
+  .requiredOption('--cron <expression>', 'Cron expression (5-field)')
+  .option('--name <name>', 'Human-readable schedule name')
+  .option('--param <params...>', 'Parameters as key=value pairs')
+  .option('--json', 'Output as JSON')
+  .action((opts: { skill: string; cron: string; name?: string; param?: string[]; json?: boolean }) => {
+    ensureDirectories()
+
+    // Verify skill exists
+    const skillCheck = loadSkill(opts.skill)
+    if (!skillCheck.ok) {
+      if (opts.json) {
+        console.log(JSON.stringify({ ok: false, error: skillCheck.error }))
+      } else {
+        console.error(skillCheck.error)
+      }
+      process.exit(1)
+    }
+
+    // Validate cron expression
+    const cron = validateCron(opts.cron)
+    if (!cron) {
+      const msg = `Invalid cron expression: "${opts.cron}"`
+      if (opts.json) {
+        console.log(JSON.stringify({ ok: false, error: msg }))
+      } else {
+        console.error(msg)
+      }
+      process.exit(1)
+    }
+
+    // Parse params
+    const params: Record<string, string> = {}
+    if (opts.param) {
+      for (const p of opts.param) {
+        const eqIndex = p.indexOf('=')
+        if (eqIndex === -1) {
+          console.error(`Invalid param format: "${p}" (expected key=value)`)
+          process.exit(1)
+        }
+        params[p.slice(0, eqIndex)] = p.slice(eqIndex + 1)
+      }
+    }
+
+    const id = generateScheduleId()
+    const schedule = {
+      id: id as string,
+      name: opts.name ?? `${opts.skill} schedule`,
+      cron: opts.cron,
+      skill: opts.skill,
+      params,
+      enabled: true,
+      created_at: new Date().toISOString(),
+    }
+
+    const result = saveSchedule(schedule)
+    if (!result.ok) {
+      if (opts.json) {
+        console.log(JSON.stringify({ ok: false, error: result.error }))
+      } else {
+        console.error(result.error)
+      }
+      process.exit(1)
+    }
+
+    const nextRuns = getNextRuns(opts.cron, 3)
+
+    if (opts.json) {
+      console.log(JSON.stringify({ ok: true, schedule, nextRuns }))
+    } else {
+      console.log(`Schedule created: ${schedule.id}`)
+      console.log(`  Name: ${schedule.name}`)
+      console.log(`  Skill: ${schedule.skill}`)
+      console.log(`  Cron: ${schedule.cron}`)
+      if (nextRuns.length > 0) {
+        console.log(`  Next runs:`)
+        for (const run of nextRuns) {
+          console.log(`    - ${new Date(run).toLocaleString()}`)
+        }
+      }
     }
   })
 
