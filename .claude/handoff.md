@@ -3,7 +3,7 @@
 ## Status: Phase 4 COMPLETE (TUI REPL), Phase 5 NEXT (Polish & Testing)
 
 **Date:** 2026-02-07
-**Branch:** `feat/phase-1-foundation`
+**Branch:** `main` (Phases 1-4 merged via PR #2)
 **Repo:** https://github.com/vulh1209/vesper-schedule
 
 ## What's Done

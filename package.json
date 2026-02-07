@@ -26,6 +26,21 @@
     "@types/react": "^18.3.0",
     "typescript": "^5.7.0"
   },
+  "files": [
+    "bin/",
+    "src/",
+    "skills/",
+    "LICENSE",
+    "README.md"
+  ],
+  "keywords": [
+    "cli",
+    "github",
+    "automation",
+    "scheduler",
+    "claude",
+    "ai"
+  ],
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
