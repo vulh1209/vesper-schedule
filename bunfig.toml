@@ -2,4 +2,3 @@
 peer = false
 
 [test]
-preload = []
