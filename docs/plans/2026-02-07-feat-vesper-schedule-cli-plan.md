@@ -1036,40 +1036,40 @@ enabled: true
 
 **Goal:** Background daemon with cron scheduling and job queue
 
-- [ ] Implement scheduler service (`src/daemon/scheduler.ts`)
+- [x] Implement scheduler service (`src/daemon/scheduler.ts`)
   - Croner integration for cron jobs
   - Support recurring (cron) and one-time schedules
   - Timezone support (user's local timezone)
-- [ ] Implement job queue (`src/daemon/queue.ts`)
+- [x] Implement job queue (`src/daemon/queue.ts`)
   - Sequential FIFO queue
   - Max queue size (50)
   - Job timeout (10 min)
   - Status tracking per job
-- [ ] Implement IPC protocol (`src/ipc/protocol.ts`)
+- [x] Implement IPC protocol (`src/ipc/protocol.ts`)
   - Unix domain socket at `~/.vesper-schedule/daemon.sock`
-  - Request/response message types
-  - Client and server implementations
-- [ ] Implement daemon process (`src/daemon/index.ts`)
-  - **[UPDATED] Atomic PID file writing** (write to tmp, rename)
-  - Graceful shutdown on SIGTERM/SIGINT **[UPDATED] with queue draining**
+  - NDJSON framing, request/response with correlation IDs
+  - Client (`src/ipc/client.ts`) and server (`src/ipc/server.ts`)
+- [x] Implement daemon process (`src/daemon/index.ts`)
+  - Atomic PID file writing (write to tmp, rename)
+  - Graceful shutdown on SIGTERM/SIGINT with queue draining
   - Stale PID detection and cleanup
-  - Schedule file watching for hot-reload **[UPDATED] with debounce (300ms)**
-- [ ] Implement schedule persistence
+- [x] Implement schedule persistence (`src/daemon/schedules.ts`)
   - JSON files at `~/.vesper-schedule/schedules/<id>.json`
   - Zod schema validation on load
-- [ ] **[NEW] Implement circuit breaker** (`src/daemon/queue.ts`)
+  - CRUD: load, save, delete, enable/disable
+- [x] Implement circuit breaker (`src/daemon/queue.ts`)
   - Track consecutive failures (max 3)
   - Pause queue with cooldown (5 min)
-  - Emit event for REPL status display
-- [ ] **[NEW] Socket permission hardening**
+  - Emit events for status display
+- [x] Socket permission hardening
   - `chmod 0600` on socket file after creation
   - Stale socket detection and cleanup on startup
-- [ ] Implement execution logging
+- [x] Implement execution logging (`src/daemon/logger.ts`)
   - Log files at `~/.vesper-schedule/logs/<date>/<job-id>.log`
   - Structured JSON format
   - Auto-cleanup logs older than 30 days
-  - **[NEW] Cap individual log files at 1MB**
-- [ ] **[NEW] Queue persistence on shutdown**
+  - Cap individual log files at 1MB
+- [x] Queue persistence on shutdown
   - Save pending queue to `~/.vesper-schedule/queue-pending.json`
   - Reload and re-enqueue on daemon restart
 

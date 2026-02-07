@@ -1,6 +1,6 @@
 # Session Handoff — vesper-schedule
 
-## Status: Phase 2 COMPLETE (workers), Phase 3 NEXT (daemon)
+## Status: Phase 3 COMPLETE (daemon), Phase 4 NEXT (TUI REPL)
 
 **Date:** 2026-02-07
 **Branch:** `feat/phase-1-foundation`
@@ -9,44 +9,45 @@
 ## What's Done
 
 ### Phase 1 (Foundation) — COMPLETE
-All Phase 1 items checked off. Core types, config, skills, CLI scaffold.
+Core types, config, skills loader, CLI scaffold with 7 builtin skills.
 
 ### Phase 2 (Claude Code Workers) — COMPLETE
-Key files created:
+`src/worker/` — session.ts (SDK query() wrapper), executor.ts (orchestrator), sanitize.ts, github-output.ts. CLI `run` command executes skills.
+
+### Phase 3 (Scheduler + Daemon) — COMPLETE
+Key files:
 
 | File | Purpose |
 |------|---------|
-| `src/worker/sanitize.ts` | Strip GitHub tokens (ghp_*, gho_*, github_pat_*) from output |
-| `src/worker/github-output.ts` | Post to GitHub with `<!--vesper-job:id-->` idempotency markers |
-| `src/worker/session.ts` | Wrap `@anthropic-ai/claude-code` SDK `query()` — build prompt, execute, resume sessions |
-| `src/worker/executor.ts` | Orchestrate: validate params → execute session → timeout → return WorkerResult |
-| `src/cli/index.ts` | `run` command now actually executes skills via executor |
+| `src/daemon/schedules.ts` | CRUD for schedule JSON files, Zod validation |
+| `src/daemon/queue.ts` | Sequential FIFO job queue, circuit breaker (3 fails → 5min cooldown), queue persistence |
+| `src/daemon/logger.ts` | Structured JSON logs at logs/date/job.log, 1MB cap, 30-day auto-cleanup |
+| `src/daemon/scheduler.ts` | Croner cron integration, load/reload schedules, enable/disable |
+| `src/daemon/index.ts` | Daemon lifecycle: atomic PID, graceful shutdown with queue drain, IPC handler |
+| `src/ipc/protocol.ts` | NDJSON framing, request/response types with correlation IDs |
+| `src/ipc/server.ts` | Bun.listen Unix socket server, chmod 0600, stale socket cleanup |
+| `src/ipc/client.ts` | Connect to daemon, send request, await response with timeout |
+| `src/cli/index.ts` | Daemon start/stop/status + schedules list/delete/enable/disable — all wired |
 
 **Verified:**
 - TypeScript strict mode compiles clean
-- `vesper-schedule run --help` shows all options
-- `vesper-schedule skills list` still works (7 builtin skills)
+- All CLI commands show correct help
+- `vesper-schedule daemon --help` / `schedules --help` / `run --help` all work
 
-**SDK API notes (important for future work):**
-- Package: `@anthropic-ai/claude-code` v1.0.128
-- Import: `import { query } from '@anthropic-ai/claude-code'` (NOT `ClaudeCode` class)
-- `query()` returns `AsyncGenerator<SDKMessage>` — iterate with `for await`
-- Key options: `allowedTools`, `resume`, `customSystemPrompt`, `appendSystemPrompt`, `cwd`, `permissionMode`
-- Result message has `session_id`, `total_cost_usd`, `duration_ms`, `result` (text)
+**Note:** Schedule hot-reload with file watcher (debounced) was deferred — schedules reload on IPC create/delete/enable commands instead (simpler, same effect).
 
-**Remaining Phase 2 item:**
-- [ ] Manual testing of skills against a real repo (issue-triage, pr-review, release-notes)
+## What's Next (Phase 4: Rich TUI REPL)
 
-## What's Next (Phase 3: Scheduler + Daemon)
-
-See plan file Phase 3 section for full details. Key files:
-- `src/daemon/index.ts` — Daemon entry, PID file, shutdown
-- `src/daemon/scheduler.ts` — Croner cron jobs
-- `src/daemon/queue.ts` — Sequential FIFO job queue + circuit breaker
-- `src/ipc/` — Unix socket IPC (client, server, protocol)
+See plan file Phase 4 section. Key items:
+- Intent parser (regex fast-path + Claude NL parsing)
+- Cron parser (NL time → cron expression)
+- ink REPL app with React components
+- Built-in command handling (status, list, logs, help, quit)
+- Daemon connection hook (useDaemon)
 
 ## Important Notes
 
+- **SDK API:** `import { query } from '@anthropic-ai/claude-code'` — returns AsyncGenerator<SDKMessage>
 - **Plan file:** `docs/plans/2026-02-07-feat-vesper-schedule-cli-plan.md`
 - **Commit style:** Use `/commit` skill (no Claude attribution)
-- **TypeScript strict mode:** `noUnusedLocals`, `noUnusedParameters`, `noImplicitReturns` all enabled
+- **TypeScript strict:** noUnusedLocals, noUnusedParameters, noImplicitReturns

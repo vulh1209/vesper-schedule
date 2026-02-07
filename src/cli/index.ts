@@ -1,6 +1,9 @@
 import { Command } from 'commander'
 import { loadAllSkills, loadSkill } from '../skills/loader.js'
 import { executeSkill } from '../worker/executor.js'
+import { startDaemon, stopDaemon, getDaemonStatus } from '../daemon/index.js'
+import { loadSchedules } from '../daemon/schedules.js'
+import { sendIpcRequest } from '../ipc/client.js'
 import { checkSetup, runFirstTimeSetup } from '../core/setup.js'
 import { ensureDirectories } from '../core/paths.js'
 
@@ -126,39 +129,59 @@ skillsCmd
 
 program.addCommand(skillsCmd)
 
-// --- daemon subcommand (placeholder for Phase 3) ---
+// --- daemon subcommand ---
 const daemonCmd = new Command('daemon')
   .description('Manage the background daemon')
 
 daemonCmd
   .command('start')
-  .description('Start the daemon')
-  .action(() => {
-    console.log('Daemon start coming in Phase 3.')
+  .description('Start the daemon in the foreground')
+  .action(async () => {
+    ensureDirectories()
+    await startDaemon()
   })
 
 daemonCmd
   .command('stop')
   .description('Stop the daemon')
   .action(() => {
-    console.log('Daemon stop coming in Phase 3.')
+    stopDaemon()
   })
 
 daemonCmd
   .command('status')
   .description('Show daemon status')
   .option('--json', 'Output as JSON')
-  .action((opts: { json?: boolean }) => {
-    if (opts.json) {
-      console.log(JSON.stringify({ running: false, message: 'Daemon not implemented yet (Phase 3)' }))
+  .action(async (opts: { json?: boolean }) => {
+    const local = getDaemonStatus()
+    if (!local.running) {
+      if (opts.json) {
+        console.log(JSON.stringify({ running: false }))
+      } else {
+        console.log('Daemon is not running.')
+      }
       return
     }
-    console.log('Daemon status coming in Phase 3.')
+
+    // Get detailed status via IPC
+    const response = await sendIpcRequest('daemon:status')
+    if (opts.json) {
+      console.log(JSON.stringify(response.success ? response.data : { running: true, pid: local.pid }))
+    } else if (response.success) {
+      const data = response.data as Record<string, unknown>
+      console.log(`Daemon running (pid: ${data['pid']})`)
+      console.log(`  Active schedules: ${data['activeSchedules']}`)
+      console.log(`  Queue pending: ${data['queuePending']}`)
+      console.log(`  Queue executing: ${data['queueExecuting']}`)
+      if (data['circuitOpen']) console.log('  Circuit breaker: OPEN (paused)')
+    } else {
+      console.log(`Daemon running (pid: ${local.pid}) but IPC unavailable.`)
+    }
   })
 
 program.addCommand(daemonCmd)
 
-// --- schedules subcommand (placeholder for Phase 3) ---
+// --- schedules subcommand ---
 const schedulesCmd = new Command('schedules')
   .description('Manage schedules')
 
@@ -167,11 +190,73 @@ schedulesCmd
   .description('List all schedules')
   .option('--json', 'Output as JSON')
   .action((opts: { json?: boolean }) => {
+    ensureDirectories()
+    const result = loadSchedules()
+    if (!result.ok) {
+      console.error(result.error)
+      process.exit(1)
+    }
+    const schedules = result.value
+
     if (opts.json) {
-      console.log(JSON.stringify([]))
+      console.log(JSON.stringify(schedules, null, 2))
       return
     }
-    console.log('No schedules configured. Create one via the REPL (Phase 4).')
+
+    if (schedules.length === 0) {
+      console.log('No schedules configured.')
+      return
+    }
+
+    console.log(`\n  Schedules (${schedules.length}):\n`)
+    for (const s of schedules) {
+      const status = s.enabled ? 'active' : 'paused'
+      console.log(`  ${s.id.padEnd(12)} ${s.name}`)
+      console.log(`  ${''.padEnd(12)} skill: ${s.skill}  cron: ${s.cron}  [${status}]`)
+      if (s.last_run) {
+        console.log(`  ${''.padEnd(12)} last run: ${s.last_run} (${s.last_status ?? 'unknown'})`)
+      }
+      console.log()
+    }
+  })
+
+schedulesCmd
+  .command('delete <id>')
+  .description('Delete a schedule')
+  .action(async (id: string) => {
+    const response = await sendIpcRequest('schedule:delete', { id })
+    if (response.success) {
+      console.log(`Schedule "${id}" deleted.`)
+    } else {
+      console.error(response.error)
+      process.exit(1)
+    }
+  })
+
+schedulesCmd
+  .command('enable <id>')
+  .description('Enable a schedule')
+  .action(async (id: string) => {
+    const response = await sendIpcRequest('schedule:enable', { id, enabled: true })
+    if (response.success) {
+      console.log(`Schedule "${id}" enabled.`)
+    } else {
+      console.error(response.error)
+      process.exit(1)
+    }
+  })
+
+schedulesCmd
+  .command('disable <id>')
+  .description('Disable a schedule')
+  .action(async (id: string) => {
+    const response = await sendIpcRequest('schedule:enable', { id, enabled: false })
+    if (response.success) {
+      console.log(`Schedule "${id}" disabled.`)
+    } else {
+      console.error(response.error)
+      process.exit(1)
+    }
   })
 
 program.addCommand(schedulesCmd)
