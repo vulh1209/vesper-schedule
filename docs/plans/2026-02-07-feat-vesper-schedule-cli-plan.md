@@ -1002,25 +1002,25 @@ enabled: true
 
 **Goal:** Execute skills via Claude Code SDK, post results to GitHub
 
-- [ ] Implement WorkerSession (`src/worker/session.ts`)
-  - Wrap `claude-code-js` SDK
-  - Build prompt from skill template + params
-  - Handle fresh sessions and resume
-  - Store session IDs for resumability
-- [ ] Implement skill executor (`src/worker/executor.ts`)
+- [x] Implement WorkerSession (`src/worker/session.ts`)
+  - Wrap `@anthropic-ai/claude-code` SDK `query()` function
+  - Build prompt from skill template + params (safe interpolation)
+  - Handle fresh sessions and resume via stored session_id
+  - Store session IDs at `~/.vesper-schedule/sessions/<id>.json`
+- [x] Implement skill executor (`src/worker/executor.ts`)
   - Validate params against skill schema before execution
-  - Timeout handling (10 min default)
-  - Error capture and structured logging
-- [ ] Implement GitHub output idempotency (`src/worker/github-output.ts`)
+  - Timeout handling (10 min default from config)
+  - Error capture and structured WorkerResult return
+- [x] Implement GitHub output idempotency (`src/worker/github-output.ts`)
   - Job ID markers in comments (`<!--vesper-job:id-->`)
-  - Duplicate detection before posting
-- [ ] **[NEW] Implement worker permission restrictions**
+  - Duplicate detection before posting via `gh api`
+- [x] **[NEW] Implement worker permission restrictions**
   - Default `allowedTools: ['Bash(gh *)', 'Read']` for all skills
-  - Add `allowedTools` field to skill frontmatter schema
-  - Validate param inputs (reject shell metacharacters)
-- [ ] **[NEW] Implement log sanitization**
-  - Strip GitHub tokens (`ghp_*`, `gho_*`, `github_pat_*`) from all logged output
-  - Apply to worker output, IPC messages, and execution logs
+  - `allowedTools` field in skill frontmatter schema (from Phase 1)
+  - Validate param inputs (reject shell metacharacters via validator)
+- [x] **[NEW] Implement log sanitization** (`src/worker/sanitize.ts`)
+  - Strip GitHub tokens (`ghp_*`, `gho_*`, `github_pat_*`) from all output
+  - Applied in worker session and executor
 - [ ] Test each built-in skill manually
   - issue-triage on a test repo
   - pr-review on a test PR
@@ -1036,40 +1036,40 @@ enabled: true
 
 **Goal:** Background daemon with cron scheduling and job queue
 
-- [ ] Implement scheduler service (`src/daemon/scheduler.ts`)
+- [x] Implement scheduler service (`src/daemon/scheduler.ts`)
   - Croner integration for cron jobs
   - Support recurring (cron) and one-time schedules
   - Timezone support (user's local timezone)
-- [ ] Implement job queue (`src/daemon/queue.ts`)
+- [x] Implement job queue (`src/daemon/queue.ts`)
   - Sequential FIFO queue
   - Max queue size (50)
   - Job timeout (10 min)
   - Status tracking per job
-- [ ] Implement IPC protocol (`src/ipc/protocol.ts`)
+- [x] Implement IPC protocol (`src/ipc/protocol.ts`)
   - Unix domain socket at `~/.vesper-schedule/daemon.sock`
-  - Request/response message types
-  - Client and server implementations
-- [ ] Implement daemon process (`src/daemon/index.ts`)
-  - **[UPDATED] Atomic PID file writing** (write to tmp, rename)
-  - Graceful shutdown on SIGTERM/SIGINT **[UPDATED] with queue draining**
+  - NDJSON framing, request/response with correlation IDs
+  - Client (`src/ipc/client.ts`) and server (`src/ipc/server.ts`)
+- [x] Implement daemon process (`src/daemon/index.ts`)
+  - Atomic PID file writing (write to tmp, rename)
+  - Graceful shutdown on SIGTERM/SIGINT with queue draining
   - Stale PID detection and cleanup
-  - Schedule file watching for hot-reload **[UPDATED] with debounce (300ms)**
-- [ ] Implement schedule persistence
+- [x] Implement schedule persistence (`src/daemon/schedules.ts`)
   - JSON files at `~/.vesper-schedule/schedules/<id>.json`
   - Zod schema validation on load
-- [ ] **[NEW] Implement circuit breaker** (`src/daemon/queue.ts`)
+  - CRUD: load, save, delete, enable/disable
+- [x] Implement circuit breaker (`src/daemon/queue.ts`)
   - Track consecutive failures (max 3)
   - Pause queue with cooldown (5 min)
-  - Emit event for REPL status display
-- [ ] **[NEW] Socket permission hardening**
+  - Emit events for status display
+- [x] Socket permission hardening
   - `chmod 0600` on socket file after creation
   - Stale socket detection and cleanup on startup
-- [ ] Implement execution logging
+- [x] Implement execution logging (`src/daemon/logger.ts`)
   - Log files at `~/.vesper-schedule/logs/<date>/<job-id>.log`
   - Structured JSON format
   - Auto-cleanup logs older than 30 days
-  - **[NEW] Cap individual log files at 1MB**
-- [ ] **[NEW] Queue persistence on shutdown**
+  - Cap individual log files at 1MB
+- [x] Queue persistence on shutdown
   - Save pending queue to `~/.vesper-schedule/queue-pending.json`
   - Reload and re-enqueue on daemon restart
 
@@ -1085,32 +1085,32 @@ enabled: true
 
 **Goal:** Interactive chat REPL with rich terminal UI
 
-- [ ] Implement intent parser (`src/parser/intent.ts`)
+- [x] Implement intent parser (`src/parser/intent.ts`)
   - **[UPDATED] Regex fast-path** for built-in commands (skip Claude call)
   - NL → structured intent via Claude (only for natural language input)
   - Support Vietnamese and English
   - Confidence display + confirmation flow
   - **[NEW] Structured JSON input to Claude** (not string interpolation)
-- [ ] Implement cron parser (`src/parser/cron-parser.ts`)
+- [x] Implement cron parser (`src/parser/cron-parser.ts`)
   - NL time → cron expression
   - Preview next 3 execution times
   - **[NEW] Validate cron expressions** with croner before saving
-- [ ] Implement REPL app (`src/cli/repl.tsx`)
+- [x] Implement REPL app (`src/cli/repl.tsx`)
   - ink-based React app
   - Chat message history display
   - TextInput with prompt
   - Command detection (status, list, logs, etc.)
-- [ ] Implement REPL components
+- [x] Implement REPL components
   - `Welcome.tsx` - first-time banner with help
   - `Chat.tsx` - message list + input
   - `ScheduleTable.tsx` - table of schedules with status
   - `JobStatus.tsx` - spinner + progress for running jobs
   - `DaemonIndicator.tsx` - daemon status in prompt area
-- [ ] Implement daemon connection from REPL (`src/cli/hooks/useDaemon.ts`)
+- [x] Implement daemon connection from REPL (`src/cli/hooks/useDaemon.ts`)
   - Auto-detect daemon running
   - IPC client for sending commands
   - Real-time status updates
-- [ ] Built-in command handling
+- [x] Built-in command handling
   - `status` → ScheduleTable
   - `list` → schedule list
   - `logs [job-id]` → execution log viewer
@@ -1120,14 +1120,14 @@ enabled: true
   - `help` → command reference
   - `quit` → exit REPL
 
-- [ ] **[NEW] Implement CLI subcommands for all REPL operations**
+- [x] **[NEW] Implement CLI subcommands for all REPL operations**
   - `vesper-schedule run <skill> --repo <repo> [--param key=value]`
   - `vesper-schedule schedule create --skill <skill> --cron <expr> [--param key=value]`
   - `vesper-schedule schedule list [--json]`
   - `vesper-schedule schedule delete <id>`
   - `vesper-schedule daemon status [--json]`
   - All commands support `--json` flag for machine output
-- [ ] **[NEW] Disable input during intent processing**
+- [x] **[NEW] Disable input during intent processing**
   - Prevent queued inputs causing race conditions
   - Show clear "thinking..." indicator
 
