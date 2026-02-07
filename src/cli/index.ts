@@ -1,6 +1,6 @@
 import { Command } from 'commander'
 import { loadAllSkills, loadSkill } from '../skills/loader.js'
-
+import { executeSkill } from '../worker/executor.js'
 import { checkSetup, runFirstTimeSetup } from '../core/setup.js'
 import { ensureDirectories } from '../core/paths.js'
 
@@ -176,18 +176,26 @@ schedulesCmd
 
 program.addCommand(schedulesCmd)
 
-// --- run subcommand (placeholder for Phase 2) ---
+// --- run subcommand ---
 program
   .command('run <skill>')
   .description('Run a skill immediately')
   .option('--repo <repo>', 'GitHub repo (owner/repo)')
   .option('--param <params...>', 'Parameters as key=value pairs')
   .option('--json', 'Output as JSON')
-  .action((skill: string, opts: { repo?: string; param?: string[]; json?: boolean }) => {
+  .option('--timeout <ms>', 'Timeout in milliseconds')
+  .option('--resume <sessionId>', 'Resume an existing session')
+  .action(async (skill: string, opts: { repo?: string; param?: string[]; json?: boolean; timeout?: string; resume?: string }) => {
     ensureDirectories()
-    const result = loadSkill(skill)
-    if (!result.ok) {
-      console.error(result.error)
+
+    // Verify skill exists before executing
+    const skillCheck = loadSkill(skill)
+    if (!skillCheck.ok) {
+      if (opts.json) {
+        console.log(JSON.stringify({ ok: false, error: skillCheck.error }))
+      } else {
+        console.error(skillCheck.error)
+      }
       process.exit(1)
     }
 
@@ -204,13 +212,40 @@ program
       }
     }
 
-    if (opts.json) {
-      console.log(JSON.stringify({ skill: result.value.slug, params, status: 'not_implemented' }))
-      return
+    if (!opts.json) {
+      console.log(`Running skill "${skillCheck.value.metadata.name}"...`)
     }
 
-    console.log(`Skill "${result.value.metadata.name}" loaded. Execution coming in Phase 2.`)
-    console.log(`Params: ${JSON.stringify(params)}`)
+    const result = await executeSkill({
+      skillSlug: skill,
+      params,
+      timeoutMs: opts.timeout ? Number(opts.timeout) : undefined,
+      resumeSessionId: opts.resume,
+      onMessage: opts.json ? undefined : (msg) => {
+        if (msg.type === 'assistant') {
+          // Show streaming assistant text content
+          for (const block of msg.message.content) {
+            if (block.type === 'text' && block.text) {
+              process.stdout.write('.')
+            }
+          }
+        }
+      },
+    })
+
+    if (opts.json) {
+      console.log(JSON.stringify(result, null, 2))
+    } else if (result.ok) {
+      console.log('\n')
+      console.log(`Completed in ${(result.duration / 1000).toFixed(1)}s | Cost: $${result.cost.toFixed(4)}`)
+      console.log(`Session: ${result.sessionId}`)
+      if (result.output) {
+        console.log(`\nOutput:\n${result.output}`)
+      }
+    } else {
+      console.error(`\nFailed (${result.code}): ${result.error}`)
+      process.exit(1)
+    }
   })
 
 export function run(argv: string[]): void {

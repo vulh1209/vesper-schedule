@@ -1002,25 +1002,25 @@ enabled: true
 
 **Goal:** Execute skills via Claude Code SDK, post results to GitHub
 
-- [ ] Implement WorkerSession (`src/worker/session.ts`)
-  - Wrap `claude-code-js` SDK
-  - Build prompt from skill template + params
-  - Handle fresh sessions and resume
-  - Store session IDs for resumability
-- [ ] Implement skill executor (`src/worker/executor.ts`)
+- [x] Implement WorkerSession (`src/worker/session.ts`)
+  - Wrap `@anthropic-ai/claude-code` SDK `query()` function
+  - Build prompt from skill template + params (safe interpolation)
+  - Handle fresh sessions and resume via stored session_id
+  - Store session IDs at `~/.vesper-schedule/sessions/<id>.json`
+- [x] Implement skill executor (`src/worker/executor.ts`)
   - Validate params against skill schema before execution
-  - Timeout handling (10 min default)
-  - Error capture and structured logging
-- [ ] Implement GitHub output idempotency (`src/worker/github-output.ts`)
+  - Timeout handling (10 min default from config)
+  - Error capture and structured WorkerResult return
+- [x] Implement GitHub output idempotency (`src/worker/github-output.ts`)
   - Job ID markers in comments (`<!--vesper-job:id-->`)
-  - Duplicate detection before posting
-- [ ] **[NEW] Implement worker permission restrictions**
+  - Duplicate detection before posting via `gh api`
+- [x] **[NEW] Implement worker permission restrictions**
   - Default `allowedTools: ['Bash(gh *)', 'Read']` for all skills
-  - Add `allowedTools` field to skill frontmatter schema
-  - Validate param inputs (reject shell metacharacters)
-- [ ] **[NEW] Implement log sanitization**
-  - Strip GitHub tokens (`ghp_*`, `gho_*`, `github_pat_*`) from all logged output
-  - Apply to worker output, IPC messages, and execution logs
+  - `allowedTools` field in skill frontmatter schema (from Phase 1)
+  - Validate param inputs (reject shell metacharacters via validator)
+- [x] **[NEW] Implement log sanitization** (`src/worker/sanitize.ts`)
+  - Strip GitHub tokens (`ghp_*`, `gho_*`, `github_pat_*`) from all output
+  - Applied in worker session and executor
 - [ ] Test each built-in skill manually
   - issue-triage on a test repo
   - pr-review on a test PR
